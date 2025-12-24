@@ -97,11 +97,10 @@ export function SettingsForm({ user, profile }: SettingsFormProps) {
 
             {message && (
               <div
-                className={`p-3 rounded-lg text-sm ${
-                  message.type === "success"
-                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                    : "bg-destructive/10 text-destructive"
-                }`}
+                className={`p-3 rounded-lg text-sm ${message.type === "success"
+                  ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                  : "bg-destructive/10 text-destructive"
+                  }`}
               >
                 {message.text}
               </div>
@@ -111,37 +110,6 @@ export function SettingsForm({ user, profile }: SettingsFormProps) {
               {isLoading ? "Saving..." : "Save Changes"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
-
-      <Card className="glass border-border/50">
-        <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-          <CardDescription>Customize how ClientNova looks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Theme</p>
-              <p className="text-sm text-muted-foreground">Toggle between light and dark mode</p>
-            </div>
-            <ThemeToggle />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="glass border-border/50 border-destructive/20">
-        <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>Irreversible and destructive actions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Deleting your account will permanently remove all your data and cannot be undone.
-          </p>
-          <Button variant="destructive" disabled>
-            Delete Account
-          </Button>
         </CardContent>
       </Card>
     </div>

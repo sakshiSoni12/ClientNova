@@ -15,18 +15,8 @@ export default async function SettingsPage() {
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single()
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <DashboardSidebar />
-
-      <div className="flex-1 flex flex-col">
-        <DashboardHeader user={data.user} profile={profile} />
-
-        <main className="flex-1 p-8">
-          <div className="max-w-3xl mx-auto">
-            <SettingsForm user={data.user} profile={profile} />
-          </div>
-        </main>
-      </div>
+    <div className="max-w-3xl mx-auto">
+      <SettingsForm user={data.user} profile={profile} />
     </div>
   )
 }

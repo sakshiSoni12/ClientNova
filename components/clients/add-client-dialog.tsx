@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,16 +30,15 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded }: AddClient
     const formData = new FormData(e.currentTarget)
     const supabase = createClient()
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
+
     if (!user) {
       setError("You must be logged in")
       setIsLoading(false)
       return
     }
 
-    const { error: insertError } = await supabase.from("clients").insert({
+    const payload = {
       name: formData.get("name") as string,
       email: (formData.get("email") as string) || null,
       phone: (formData.get("phone") as string) || null,
@@ -49,7 +49,9 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded }: AddClient
       subscription_plan: formData.get("subscription_plan") as string,
       notes: (formData.get("notes") as string) || null,
       created_by: user.id,
-    })
+    }
+
+    const { error: insertError } = await supabase.from("clients").insert(payload)
 
     if (insertError) {
       setError(insertError.message)
@@ -58,7 +60,7 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded }: AddClient
     }
 
     setIsLoading(false)
-    onClientAdded()
+    onClientAdded() // This might trigger a refresh, which is fine
   }
 
   return (

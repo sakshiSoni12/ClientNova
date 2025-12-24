@@ -25,15 +25,32 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
+    if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/login"
+      return NextResponse.redirect(url)
+    }
+
+    return supabaseResponse
+  } catch (error) {
+    // If we get an error (like invalid refresh token), redirect to login
+    // The cookies are already set to be cleared by Supabase client behavior in some cases,
+    // but explicit redirect prevents the crash.
     const url = request.nextUrl.clone()
     url.pathname = "/auth/login"
-    return NextResponse.redirect(url)
-  }
+    // Create a new response to force clear cookies if needed, or just redirect
+    const response = NextResponse.redirect(url)
 
-  return supabaseResponse
+    // Attempt to clear session cookies explicitly to be safe
+    response.cookies.delete('sb-access-token')
+    response.cookies.delete('sb-refresh-token')
+    // Note: The cookie name depends on your supabase configuration, usually sb-<project-ref>-auth-token
+
+    return response
+  }
 }

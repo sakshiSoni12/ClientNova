@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -35,12 +36,18 @@ const getSubscriptionBadge = (plan: string) => {
   return plans[plan as keyof typeof plans] || plans.basic
 }
 
+import { usePermissions } from "@/hooks/use-permissions"
+import { useToast } from "@/components/ui/use-toast"
+
 export function ClientsList() {
   const [clients, setClients] = useState<Client[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+
+  const { canCreate, canEdit, canDelete, canRequestDelete } = usePermissions()
+  const { toast } = useToast()
 
   const fetchClients = async () => {
     const supabase = createClient()
@@ -66,13 +73,35 @@ export function ClientsList() {
   }
 
   const handleDeleteClient = async (clientId: string) => {
-    if (!confirm("Are you sure you want to delete this client?")) return
-
     const supabase = createClient()
-    const { error } = await supabase.from("clients").delete().eq("id", clientId)
 
-    if (!error) {
-      fetchClients()
+    if (canDelete) {
+      if (!confirm("Are you sure you want to delete this client?")) return
+      const { error } = await supabase.from("clients").delete().eq("id", clientId)
+      if (!error) {
+        fetchClients()
+        toast({ title: "Client deleted", description: "The client has been permanently removed." })
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" })
+      }
+    } else if (canRequestDelete) {
+      if (!confirm("Request admin approval to delete this client?")) return
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { error } = await supabase.from("approval_requests").insert({
+        request_type: "DELETE_CLIENT",
+        entity_id: clientId,
+        requested_by: user.id,
+        status: "pending"
+      })
+
+      if (!error) {
+        toast({ title: "Request Sent", description: "Admin approval requested for deletion." })
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" })
+      }
     }
   }
 
@@ -87,20 +116,24 @@ export function ClientsList() {
           <h1 className="text-3xl font-bold">Clients</h1>
           <p className="text-muted-foreground mt-1">Manage your client relationships</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Client
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Client
+          </Button>
+        )}
       </div>
 
       {clients.length === 0 ? (
         <Card className="glass border-border/50">
           <CardContent className="text-center py-16">
             <p className="text-muted-foreground mb-4">No clients yet</p>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Your First Client
-            </Button>
+            {canCreate && (
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Client
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -124,11 +157,10 @@ export function ClientsList() {
                     </div>
                     <div className="flex flex-col gap-1 items-end">
                       <div
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          client.status === "active"
-                            ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                            : "bg-muted text-muted-foreground"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs ${client.status === "active"
+                          ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                          : "bg-muted text-muted-foreground"
+                          }`}
                       >
                         {client.status}
                       </div>
@@ -171,21 +203,25 @@ export function ClientsList() {
                     </div>
                   )}
                   <div className="flex gap-2 pt-2 border-t border-border">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 bg-transparent"
-                      onClick={() => {
-                        setSelectedClient(client)
-                        setIsEditDialogOpen(true)
-                      }}
-                    >
-                      <Pencil className="w-3 h-3 mr-2" />
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDeleteClient(client.id)}>
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 bg-transparent"
+                        onClick={() => {
+                          setSelectedClient(client)
+                          setIsEditDialogOpen(true)
+                        }}
+                      >
+                        <Pencil className="w-3 h-3 mr-2" />
+                        Edit
+                      </Button>
+                    )}
+                    {(canDelete || canRequestDelete) && (
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteClient(client.id)}>
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

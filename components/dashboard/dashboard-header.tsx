@@ -5,13 +5,15 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bell, Search } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import type { User } from "@supabase/supabase-js"
+import { cn } from "@/lib/utils"
 
 interface DashboardHeaderProps {
   user: User
   profile: { full_name?: string } | null
+  className?: string
 }
 
-export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
+export function DashboardHeader({ user, profile, className }: DashboardHeaderProps) {
   const initials =
     profile?.full_name
       ?.split(" ")
@@ -22,8 +24,8 @@ export function DashboardHeader({ user, profile }: DashboardHeaderProps) {
     "U"
 
   return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-      <div className="flex items-center justify-between px-8 py-4">
+    <header className={cn("border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10", className)}>
+      <div className="flex items-center justify-between px-6 py-3">
         <div className="flex items-center gap-4 flex-1 max-w-md">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,20 +44,30 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdated, client }
     const formData = new FormData(e.currentTarget)
     const supabase = createClient()
 
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      setError("You must be logged in")
+      setIsLoading(false)
+      return
+    }
+
+    const payload = {
+      name: formData.get("name") as string,
+      email: (formData.get("email") as string) || null,
+      phone: (formData.get("phone") as string) || null,
+      company: (formData.get("company") as string) || null,
+      industry: (formData.get("industry") as string) || null,
+      website: (formData.get("website") as string) || null,
+      status: formData.get("status") as string,
+      subscription_plan: formData.get("subscription_plan") as string,
+      notes: (formData.get("notes") as string) || null,
+      updated_at: new Date().toISOString(),
+    }
+
     const { error: updateError } = await supabase
       .from("clients")
-      .update({
-        name: formData.get("name") as string,
-        email: (formData.get("email") as string) || null,
-        phone: (formData.get("phone") as string) || null,
-        company: (formData.get("company") as string) || null,
-        industry: (formData.get("industry") as string) || null,
-        website: (formData.get("website") as string) || null,
-        status: formData.get("status") as string,
-        subscription_plan: formData.get("subscription_plan") as string,
-        notes: (formData.get("notes") as string) || null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq("id", client.id)
 
     if (updateError) {

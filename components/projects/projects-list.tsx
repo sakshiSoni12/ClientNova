@@ -24,12 +24,18 @@ interface Project {
   clients?: { name: string }
 }
 
+import { usePermissions } from "@/hooks/use-permissions"
+import { useToast } from "@/components/ui/use-toast"
+
 export function ProjectsList() {
   const [projects, setProjects] = useState<Project[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+
+  const { canCreate, canEdit, canDelete, canRequestDelete } = usePermissions()
+  const { toast } = useToast()
 
   const fetchProjects = async () => {
     const supabase = createClient()
@@ -58,13 +64,35 @@ export function ProjectsList() {
   }
 
   const handleDeleteProject = async (projectId: string) => {
-    if (!confirm("Are you sure you want to delete this project?")) return
-
     const supabase = createClient()
-    const { error } = await supabase.from("projects").delete().eq("id", projectId)
 
-    if (!error) {
-      fetchProjects()
+    if (canDelete) {
+      if (!confirm("Are you sure you want to delete this project?")) return
+      const { error } = await supabase.from("projects").delete().eq("id", projectId)
+      if (!error) {
+        fetchProjects()
+        toast({ title: "Project deleted", description: "The project has been permanently removed." })
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" })
+      }
+    } else if (canRequestDelete) {
+      if (!confirm("Request admin approval to delete this project?")) return
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { error } = await supabase.from("approval_requests").insert({
+        request_type: "DELETE_PROJECT",
+        entity_id: projectId,
+        requested_by: user.id,
+        status: "pending"
+      })
+
+      if (!error) {
+        toast({ title: "Request Sent", description: "Admin approval requested for deletion." })
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" })
+      }
     }
   }
 
@@ -79,20 +107,24 @@ export function ProjectsList() {
           <h1 className="text-3xl font-bold">Projects</h1>
           <p className="text-muted-foreground mt-1">Manage your client projects</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Project
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Project
+          </Button>
+        )}
       </div>
 
       {projects.length === 0 ? (
         <Card className="glass border-border/50">
           <CardContent className="text-center py-16">
             <p className="text-muted-foreground mb-4">No projects yet</p>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Your First Project
-            </Button>
+            {canCreate && (
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Project
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -106,13 +138,12 @@ export function ProjectsList() {
                     {project.clients && <CardDescription>{project.clients.name}</CardDescription>}
                   </div>
                   <div
-                    className={`px-2 py-1 rounded-full text-xs ml-2 ${
-                      project.priority === "high"
-                        ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                        : project.priority === "medium"
-                          ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
-                          : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                    }`}
+                    className={`px-2 py-1 rounded-full text-xs ml-2 ${project.priority === "high"
+                      ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                      : project.priority === "medium"
+                        ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+                        : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                      }`}
                   >
                     {project.priority}
                   </div>
@@ -126,13 +157,12 @@ export function ProjectsList() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Status</span>
                     <span
-                      className={`px-2 py-1 rounded-full ${
-                        project.status === "completed"
-                          ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                          : project.status === "in_progress"
-                            ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                            : "bg-muted text-muted-foreground"
-                      }`}
+                      className={`px-2 py-1 rounded-full ${project.status === "completed"
+                        ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                        : project.status === "in_progress"
+                          ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                          : "bg-muted text-muted-foreground"
+                        }`}
                     >
                       {project.status.replace("_", " ")}
                     </span>
@@ -152,21 +182,25 @@ export function ProjectsList() {
                   )}
                 </div>
                 <div className="flex gap-2 pt-2 border-t border-border">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 bg-transparent"
-                    onClick={() => {
-                      setSelectedProject(project)
-                      setIsEditDialogOpen(true)
-                    }}
-                  >
-                    <Pencil className="w-3 h-3 mr-2" />
-                    Edit
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleDeleteProject(project.id)}>
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 bg-transparent"
+                      onClick={() => {
+                        setSelectedProject(project)
+                        setIsEditDialogOpen(true)
+                      }}
+                    >
+                      <Pencil className="w-3 h-3 mr-2" />
+                      Edit
+                    </Button>
+                  )}
+                  {(canDelete || canRequestDelete) && (
+                    <Button variant="outline" size="sm" onClick={() => handleDeleteProject(project.id)}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -29,33 +29,23 @@ export default async function DashboardPage() {
     .in("status", ["in_progress", "planning"])
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <DashboardSidebar />
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold mb-2">Welcome back, {profile?.full_name || "User"}</h1>
+        <p className="text-muted-foreground">Here's what's happening with your clients today.</p>
+      </div>
 
-      <div className="flex-1 flex flex-col">
-        <DashboardHeader user={data.user} profile={profile} />
+      <StatsOverview
+        clientsCount={clientsCount || 0}
+        projectsCount={projectsCount || 0}
+        activeProjectsCount={activeProjectsCount || 0}
+      />
 
-        <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto space-y-8">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Welcome back, {profile?.full_name || "User"}</h1>
-              <p className="text-muted-foreground">Here's what's happening with your clients today.</p>
-            </div>
+      <MonthlyRevenueChart />
 
-            <StatsOverview
-              clientsCount={clientsCount || 0}
-              projectsCount={projectsCount || 0}
-              activeProjectsCount={activeProjectsCount || 0}
-            />
-
-            <MonthlyRevenueChart />
-
-            <div className="grid lg:grid-cols-2 gap-8">
-              <RecentClients />
-              <ActiveProjects />
-            </div>
-          </div>
-        </main>
+      <div className="grid lg:grid-cols-2 gap-8">
+        <RecentClients />
+        <ActiveProjects />
       </div>
     </div>
   )

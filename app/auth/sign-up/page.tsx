@@ -16,18 +16,22 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [fullName, setFullName] = useState("")
+
+
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
+    const supabase = createClient()
+
     try {
-      const { error } = await supabase.auth.signUp({
+      // Proceed with Sign Up
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -37,7 +41,8 @@ export default function SignUpPage() {
           },
         },
       })
-      if (error) throw error
+
+      if (signUpError) throw signUpError
       router.push("/auth/success")
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
@@ -59,7 +64,7 @@ export default function SignUpPage() {
         <Card className="glass border-border/50">
           <CardHeader>
             <CardTitle className="text-2xl">Create Account</CardTitle>
-            <CardDescription>Start managing your clients with elegance</CardDescription>
+            <CardDescription>Enter your details to create an account.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignUp} className="space-y-4">
@@ -96,9 +101,13 @@ export default function SignUpPage() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</p>}
+              {error && (
+                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg flex items-center gap-2">
+                  <span className="font-semibold">Error:</span> {error}
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Create Account"}
+                {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
             <div className="mt-6 text-center text-sm text-muted-foreground">
