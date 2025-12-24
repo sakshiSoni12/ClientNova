@@ -15,6 +15,7 @@ import { Sparkles } from "lucide-react"
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [teamMemberId, setTeamMemberId] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -26,16 +27,55 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // 1. Sign in with Email/Password first
+      const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
-
       })
-      if (error) throw error
+
+      if (signInError) throw signInError
+      if (!user) throw new Error("Authentication failed")
+
+      // 2. Validate Team Member ID
+      // Fetch the profile to check the ID
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('team_member_id, status')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        // If profile fetch fails, we should probably sign them out as it's an integrity issue
+        await supabase.auth.signOut()
+        throw new Error("Could not verify identity configuration.")
+      }
+
+      if (!profile) {
+        await supabase.auth.signOut()
+        throw new Error("User profile not found.")
+      }
+
+      // Check Status
+      if (profile.status === 'disabled') {
+        await supabase.auth.signOut()
+        throw new Error("Account is disabled.")
+      }
+
+      // STRICT VALIDATION: Team Member ID must match
+      // if (profile.team_member_id !== teamMemberId) {
+      await supabase.auth.signOut()
+      throw new Error("Invalid Team Member ID provided.")
+      //}//
+
+      // 3. Success
       router.refresh()
       router.push("/dashboard")
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
+      // Ensure we don't leave a half-logged-in state if ID validation failed locally
+      if (error instanceof Error && error.message.includes("Invalid Team Member ID")) {
+        // already signed out above
+      }
     } finally {
       setIsLoading(false)
     }
@@ -54,10 +94,21 @@ export default function LoginPage() {
         <Card className="glass border-border/50">
           <CardHeader>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <CardDescription>Sign in to your account to continue</CardDescription>
+            <CardDescription>Sign in with your Team ID</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="teamMemberId">Team Member ID</Label>
+                <Input
+                  id="teamMemberId"
+                  type="text"
+                  placeholder="TM-1234"
+                  required
+                  value={teamMemberId}
+                  onChange={(e) => setTeamMemberId(e.target.value)}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
