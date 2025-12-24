@@ -39,7 +39,7 @@ export function DashboardSidebar({ className }: { className?: string }) {
 
   return (
     <aside className={cn("w-64 border-r border-border/40 bg-background/95 backdrop-blur-xl flex flex-col h-full sticky top-0 z-30", className)}>
-      <div className="p-6">
+      <div className="p-6 pb-2">
         <Link href="/dashboard" className="flex items-center gap-3 px-2">
           <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
             <Sparkles className="w-6 h-6 text-primary-foreground" />
@@ -51,61 +51,62 @@ export function DashboardSidebar({ className }: { className?: string }) {
         </Link>
       </div>
 
-      <ScrollArea className="flex-1 px-4">
-        <div className="space-y-1.5">
-          {links.map((link) => {
-            const Icon = link.icon
-            const isActive = pathname === link.href
-            return (
-              <Link key={link.href} href={link.href}>
-                <Button
-                  variant={isActive ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full justify-start gap-3 relative overflow-hidden group transition-all duration-300",
-                    isActive && "bg-primary/10 text-primary hover:bg-primary/20",
-                  )}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="active-pill"
-                      className="absolute inset-0 bg-primary/10 border-l-2 border-primary"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    />
-                  )}
-                  <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                  <span className="relative z-10">{link.label}</span>
+      <ScrollArea className="flex-1 px-4 py-4">
+        <div className="flex flex-col gap-6">
+          <div className="space-y-1.5">
+            {links.map((link) => {
+              const Icon = link.icon
+              const isActive = pathname === link.href
+              return (
+                <Link key={link.href} href={link.href}>
+                  <Button
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full justify-start gap-3 relative overflow-hidden group transition-all duration-300",
+                      isActive && "bg-primary/10 text-primary hover:bg-primary/20",
+                    )}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-pill"
+                        className="absolute inset-0 bg-primary/10 border-l-2 border-primary"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      />
+                    )}
+                    <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                    <span className="relative z-10">{link.label}</span>
+                  </Button>
+                </Link>
+              )
+            })}
+          </div>
+
+          {isAdmin && (
+            <div className="space-y-1.5 pt-2 border-t border-border/50">
+              <div className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Admin
+              </div>
+              <Link href="/dashboard/admin/users">
+                <Button variant="ghost" className="w-full justify-start gap-3 group">
+                  <Users className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  User Roles
                 </Button>
               </Link>
-            )
-          })}
-        </div>
-
-        {isAdmin && (
-          <div className="mt-6 space-y-1.5">
-            <div className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Admin
+              <Link href="/dashboard/admin/approvals">
+                <Button variant="ghost" className="w-full justify-start gap-3 group">
+                  <ShieldAlert className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                  Approvals
+                </Button>
+              </Link>
             </div>
-            <Link href="/dashboard/admin/users">
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <Users className="w-5 h-5 text-muted-foreground" />
-                User Roles
-              </Button>
-            </Link>
-            <Link href="/dashboard/admin/approvals">
-              <Button variant="ghost" className="w-full justify-start gap-3">
-                <ShieldAlert className="w-5 h-5 text-muted-foreground" />
-                Approvals
-              </Button>
-            </Link>
-          </div>
-        )}
-
+          )}
+        </div>
       </ScrollArea>
 
-      <div className="p-4 border-t border-border">
-        <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground" onClick={handleSignOut}>
+      <div className="p-4 border-t border-border/50 mt-auto">
+        <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={handleSignOut}>
           <LogOut className="w-5 h-5" />
           Sign Out
         </Button>
