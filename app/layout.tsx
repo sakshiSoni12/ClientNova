@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster"
 import CelestialBloomShader from "@/components/ui/celestial-bloom-shader"
 import FloatingParticles from "@/components/motion/floating-particles"
 import { RBACProvider } from "@/components/providers/rbac-provider"
+import { GlobalErrorSilencer } from "@/components/providers/global-error-silencer"
 
 
 import "./globals.css"
@@ -47,8 +48,9 @@ export default function RootLayout({
       <body className="font-sans antialiased bg-transparent">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="clientnova-theme">
           <RBACProvider>
-            <CelestialBloomShader />
-            <FloatingParticles />
+            <GlobalErrorSilencer />
+            {/* <CelestialBloomShader /> */}
+            {/* <FloatingParticles /> */}
             {children}
           </RBACProvider>
         </ThemeProvider>

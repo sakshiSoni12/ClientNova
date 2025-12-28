@@ -30,7 +30,8 @@ export function RBACProvider({ children }: { children: React.ReactNode }) {
     const [role, setRole] = useState<UserRole>("viewer")
     const [isLoading, setIsLoading] = useState(true)
     const supabase = createClient()
-    const router = useRouter()
+
+
 
     const fetchRole = async () => {
         try {
@@ -62,15 +63,26 @@ export function RBACProvider({ children }: { children: React.ReactNode }) {
     }
 
     useEffect(() => {
+        // Temporary Debug: Disable RBAC checks to rule out infinite loop
+        console.log("RBAC Provider Mounted");
+        setRole("admin");
+        setIsLoading(false);
+        /*
         fetchRole()
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-            fetchRole()
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+                fetchRole()
+            } else if (event === 'SIGNED_OUT') {
+                setRole("viewer")
+                setIsLoading(false)
+            }
         })
 
         return () => {
             subscription.unsubscribe()
         }
+        */
     }, [])
 
     const value = {

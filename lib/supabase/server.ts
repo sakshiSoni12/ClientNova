@@ -17,5 +17,17 @@ export async function createClient() {
         }
       },
     },
+    global: {
+      // Force IPv4 to resolve Node.js 18+ Undici timeouts on Windows
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          // @ts-ignore - Undici specific option
+          dispatcher: new (require('undici').Agent)({
+            connect: { lookup: (hostname: string, options: any, callback: any) => { require('dns').lookup(hostname, { family: 4 }, callback) } }
+          })
+        })
+      }
+    }
   })
 }

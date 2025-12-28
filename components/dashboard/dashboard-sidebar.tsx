@@ -4,9 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Briefcase, FolderOpen, Home, Settings, Share2, UserPlus, Users, LogOut, Sparkles, ShieldAlert } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
+import { BarChart3, Briefcase, FolderOpen, Home, Settings, Share2, UserPlus, Users, Sparkles, ShieldAlert, Brain, Activity, BrainCircuit } from "lucide-react"
 
 
 // New imports
@@ -17,13 +15,15 @@ import { usePermissions } from "@/hooks/use-permissions"
 
 export function DashboardSidebar({ className }: { className?: string }) {
   const pathname = usePathname()
-  const router = useRouter()
   const { isAdmin } = usePermissions()
 
   const links = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/dashboard/projects", label: "Projects", icon: Briefcase },
     { href: "/dashboard/clients", label: "Clients", icon: Users },
+    { href: "/dashboard/client-intelligence", label: "Client Intelligence", icon: Brain },
+    { href: "/dashboard/project-health", label: "Project Health", icon: Activity },
+    { href: "/dashboard/smart-hub", label: "Smart Hub", icon: BrainCircuit },
     { href: "/dashboard/team", label: "Team", icon: UserPlus },
     { href: "/dashboard/social", label: "Social", icon: Share2 },
     { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
@@ -31,11 +31,7 @@ export function DashboardSidebar({ className }: { className?: string }) {
     { href: "/dashboard/settings", label: "Settings", icon: Settings },
   ]
 
-  const handleSignOut = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/auth/login")
-  }
+
 
   return (
     <aside className={cn("w-64 border-r border-border/40 bg-background/95 backdrop-blur-xl flex flex-col h-full sticky top-0 z-30", className)}>
@@ -105,12 +101,6 @@ export function DashboardSidebar({ className }: { className?: string }) {
         </div>
       </ScrollArea>
 
-      <div className="p-4 border-t border-border/50 mt-auto">
-        <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={handleSignOut}>
-          <LogOut className="w-5 h-5" />
-          Sign Out
-        </Button>
-      </div>
     </aside>
   )
 }

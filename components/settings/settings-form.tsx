@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { User } from "@supabase/supabase-js"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { LogOut } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface SettingsFormProps {
   user: User
@@ -21,6 +23,14 @@ export function SettingsForm({ user, profile }: SettingsFormProps) {
   const [fullName, setFullName] = useState(profile?.full_name || "")
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    // router.push("/auth/login")
+    window.location.href = "/" // Go to home instead or just stay
+  }
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -112,6 +122,20 @@ export function SettingsForm({ user, profile }: SettingsFormProps) {
           </form>
         </CardContent>
       </Card>
+
+      <Card className="glass border-border/50 border-destructive/20">
+        <CardHeader>
+          <CardTitle className="text-destructive">Danger Zone</CardTitle>
+          <CardDescription>Actions that affect your account session</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="destructive" onClick={handleSignOut} className="flex items-center gap-2">
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </Button>
+        </CardContent>
+      </Card>
+
     </div>
   )
 }

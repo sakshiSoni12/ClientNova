@@ -104,11 +104,14 @@ export function AddProjectDialog({ open, onOpenChange, onProjectAdded }: AddProj
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select name="status" defaultValue="planning">
+              <Select name="status" defaultValue="active">
                 <SelectTrigger id="status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="prospect">Prospect</SelectItem>
                   <SelectItem value="planning">Planning</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>

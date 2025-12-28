@@ -1,98 +1,90 @@
 "use client"
 
-import { motion, useMotionValue, useSpring } from "framer-motion"
+import { motion } from "framer-motion"
 import { useEffect, useState } from "react"
 
 export function AnimatedBackground() {
     const [mounted, setMounted] = useState(false)
 
-    // Mouse tracking setup
-    const mouseX = useMotionValue(0)
-    const mouseY = useMotionValue(0)
-
-    // Smooth spring animation for the movement
-    const springConfig = { damping: 25, stiffness: 150 }
-    const x1 = useSpring(mouseX, springConfig)
-    const y1 = useSpring(mouseY, springConfig)
-    const x2 = useSpring(mouseX, { ...springConfig, damping: 30 }) // Slightly different damping for depth
-    const y2 = useSpring(mouseY, { ...springConfig, damping: 30 })
-
     useEffect(() => {
         setMounted(true)
+    }, [])
 
-        const handleMouseMove = (e: MouseEvent) => {
-            const { innerWidth, innerHeight } = window
-            // Calculate normalized position (-0.5 to 0.5)
-            const x = e.clientX / innerWidth - 0.5
-            const y = e.clientY / innerHeight - 0.5
-
-            // Set motion values (multiply by factor for movement range)
-            mouseX.set(x * 100) // Move up to 100px
-            mouseY.set(y * 100)
-        }
-
-        window.addEventListener("mousemove", handleMouseMove)
-        return () => window.removeEventListener("mousemove", handleMouseMove)
-    }, [mouseX, mouseY])
+    if (!mounted) return null
 
     return (
-        <div className="fixed inset-0 -z-50 overflow-hidden pointer-events-none">
-            {/* Interactive Orb 1 (Top Left) */}
-            <motion.div
-                style={{ x: x1, y: y1 }}
-                animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.3, 0.5, 0.3],
-                }}
-                transition={{
-                    scale: { duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" },
-                    opacity: { duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }
-                }}
-                className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary/20 rounded-full blur-[100px]"
-            />
+        <div className="fixed inset-0 -z-50 overflow-hidden pointer-events-none bg-inherit">
+            <div className="absolute inset-0 flex items-center justify-center opacity-40 mix-blend-multiply dark:mix-blend-screen">
+                {/* 
+                   The "Purple Blurry Motionable Flower" Effect 
+                   created by overlapping, rotating, and scaling disparate blurred shapes
+                */}
 
-            {/* Interactive Orb 2 (Bottom Right) */}
-            <motion.div
-                style={{ x: x2, y: y2 }} // Moves slightly differently for parallax
-                animate={{
-                    scale: [1, 1.5, 1],
-                    opacity: [0.2, 0.4, 0.2],
-                }}
-                transition={{
-                    scale: { duration: 12, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 2 },
-                    opacity: { duration: 12, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 2 }
-                }}
-                className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px]"
-            />
+                {/* Petal/Orb 1 */}
+                <motion.div
+                    animate={{
+                        scale: [1, 1.4, 1],
+                        rotate: [0, 90, 0],
+                        filter: ["blur(80px)", "blur(100px)", "blur(80px)"],
+                    }}
+                    transition={{
+                        duration: 15,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                    }}
+                    className="absolute w-[600px] h-[600px] bg-purple-500/30 rounded-full mix-blend-screen"
+                    style={{ x: -100, y: -100 }}
+                />
 
-            {/* Floating particles - Client-side only */}
-            {mounted && (
-                <div className="absolute inset-0 opacity-20">
-                    {[...Array(6)].map((_, i) => (
-                        <motion.div
-                            key={i}
-                            initial={{
-                                x: Math.random() * 100 + "%",
-                                y: Math.random() * 100 + "%",
-                            }}
-                            animate={{
-                                y: [0, -100, 0],
-                                x: [0, Math.random() * 50 - 25, 0],
-                            }}
-                            transition={{
-                                duration: 20 + Math.random() * 10,
-                                repeat: Number.POSITIVE_INFINITY,
-                                ease: "linear",
-                            }}
-                            className="absolute w-2 h-2 bg-primary rounded-full blur-sm"
-                            style={{
-                                left: 0,
-                                top: 0
-                            }}
-                        />
-                    ))}
-                </div>
-            )}
+                {/* Petal/Orb 2 */}
+                <motion.div
+                    animate={{
+                        scale: [1, 1.5, 1],
+                        rotate: [0, -90, 0],
+                        x: [100, 150, 100],
+                        filter: ["blur(90px)", "blur(120px)", "blur(90px)"],
+                    }}
+                    transition={{
+                        duration: 18,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: 1
+                    }}
+                    className="absolute w-[500px] h-[500px] bg-indigo-500/30 rounded-full mix-blend-screen"
+                />
+
+                {/* Petal/Orb 3 */}
+                <motion.div
+                    animate={{
+                        scale: [1, 1.3, 1],
+                        rotate: [0, 180, 0],
+                        y: [100, 50, 100],
+                        filter: ["blur(70px)", "blur(100px)", "blur(70px)"],
+                    }}
+                    transition={{
+                        duration: 20,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: 2
+                    }}
+                    className="absolute w-[550px] h-[550px] bg-violet-500/30 rounded-full mix-blend-screen"
+                    style={{ x: 50, y: 150 }}
+                />
+
+                {/* Core Center Glow */}
+                <motion.div
+                    animate={{
+                        scale: [1, 1.2, 1],
+                        opacity: [0.5, 0.8, 0.5],
+                    }}
+                    transition={{
+                        duration: 8,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                    }}
+                    className="absolute w-[300px] h-[300px] bg-fuchsia-500/20 rounded-full blur-[60px]"
+                />
+            </div>
         </div>
     )
 }

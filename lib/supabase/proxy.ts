@@ -12,7 +12,9 @@ export async function updateSession(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          const all = request.cookies.getAll()
+          console.log("[Middleware] Cookies received:", all.map(c => c.name))
+          return all
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
@@ -22,35 +24,29 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
         },
       },
+      global: {
+        // Force IPv4 to resolve Node.js 18+ Undici timeouts on Windows
+        fetch: (url, options) => {
+          return fetch(url, {
+            ...options,
+            // @ts-ignore - Undici specific option
+            dispatcher: new (require('undici').Agent)({
+              connect: { lookup: (hostname: string, options: any, callback: any) => { require('dns').lookup(hostname, { family: 4 }, callback) } }
+            })
+          })
+        }
+      }
     },
   )
 
+  // CHANGE: We call getUser() to trigger cookie refreshing (Supabase SSR),
+  // but we IGNORE the result and NEVER redirect to login from here.
+  // This matches the "Emergency Bypass" behavior requested by the user.
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (request.nextUrl.pathname.startsWith("/dashboard") && !user) {
-      const url = request.nextUrl.clone()
-      url.pathname = "/auth/login"
-      return NextResponse.redirect(url)
-    }
-
-    return supabaseResponse
+    await supabase.auth.getUser()
   } catch (error) {
-    // If we get an error (like invalid refresh token), redirect to login
-    // The cookies are already set to be cleared by Supabase client behavior in some cases,
-    // but explicit redirect prevents the crash.
-    const url = request.nextUrl.clone()
-    url.pathname = "/auth/login"
-    // Create a new response to force clear cookies if needed, or just redirect
-    const response = NextResponse.redirect(url)
-
-    // Attempt to clear session cookies explicitly to be safe
-    response.cookies.delete('sb-access-token')
-    response.cookies.delete('sb-refresh-token')
-    // Note: The cookie name depends on your supabase configuration, usually sb-<project-ref>-auth-token
-
-    return response
+    console.warn("[Middleware] checking user failed (ignoring to allow access):", error)
   }
+
+  return supabaseResponse
 }

@@ -1,47 +1,51 @@
 "use client"
 
-import type React from "react"
-
-import { createClient } from "@/lib/supabase/client"
+import { useState } from "react"
+import { createClient } from "@/lib/supabase/client" // Correct client import
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
 import { Sparkles } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-
-
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  // DEBUG STATE: keep logs in console, but don't show on UI to keep it clean
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
+    const supabase = createClient()
+
     try {
-      // Sign in with Email/Password
-      const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
+      // console.log("Attempting SignIn...")
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (signInError) throw signInError
-      if (!user) throw new Error("Authentication failed")
+      if (error) {
+        // console.error("Login Error:", error.message)
+        throw new Error(error.message)
+      }
 
-      // Success
-      router.refresh()
-      router.push("/dashboard")
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      // console.log("Login Success! User:", data.user?.id)
+
+      // Force hard reload/redirect to ensure dashboard hydration
+      window.location.href = "/dashboard"
+
+    } catch (err: any) {
+      // console.error("Login Failed:", err)
+      setError(err.message || "An error occurred during sign in")
     } finally {
       setIsLoading(false)
     }
@@ -60,10 +64,10 @@ export default function LoginPage() {
         <Card className="glass border-border/50">
           <CardHeader>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <CardDescription>Sign in to your account</CardDescription>
+            <CardDescription>Enter your credentials to access your dashboard.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} noValidate className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -80,20 +84,27 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
+                  placeholder="Enter your password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              {error && <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</p>}
+
+              {error && (
+                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg flex items-center gap-2">
+                  <span className="font-semibold">Error:</span> {error}
+                </div>
+              )}
+
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
             <div className="mt-6 text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link href="/auth/sign-up" className="text-primary hover:underline">
-                Sign up
+                Create Account
               </Link>
             </div>
           </CardContent>
