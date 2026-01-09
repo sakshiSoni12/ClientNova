@@ -6,11 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Download, FileText, Filter } from "lucide-react"
+import { Download, FileText, Filter, Loader2, Sparkles } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 interface Client {
     id: string
     name: string
+    email: string | null
+    phone: string | null
+    company: string | null
+    industry: string | null
+    status: string
 }
 
 interface Project {
@@ -33,12 +41,14 @@ export function ReportsView() {
     const [selectedClient, setSelectedClient] = useState<string>("all")
     const [timeframe, setTimeframe] = useState<string>("all_time")
     const [isLoading, setIsLoading] = useState(true)
+    const [isGenerating, setIsGenerating] = useState(false)
+    const { toast } = useToast()
 
     const fetchData = async () => {
         const supabase = createClient()
 
         // Fetch clients
-        const { data: clientsData } = await supabase.from("clients").select("id, name")
+        const { data: clientsData } = await supabase.from("clients").select("*")
         if (clientsData) setClients(clientsData)
 
         // Fetch projects with client details
@@ -50,7 +60,7 @@ export function ReportsView() {
         if (projectsData) {
             // safe cast or handling for clients array/object if needed, 
             // though Supabase single relation usually returns an object
-            const formattedProjects = projectsData.map(p => ({
+            const formattedProjects = projectsData.map((p: any) => ({
                 ...p,
                 // Helper to ensure we access the joined name correctly
                 clients: Array.isArray(p.clients) ? p.clients[0] : p.clients
@@ -99,32 +109,237 @@ export function ReportsView() {
         setFilteredProjects(result)
     }, [projects, selectedClient, timeframe])
 
-    const handleExportCSV = () => {
-        const headers = ["Project Name", "Client", "Status", "Priority", "Budget", "Start Date", "Created At"]
-        const rows = filteredProjects.map(p => [
+    const getBase64ImageFromUrl = async (imageUrl: string): Promise<string | null> => {
+        try {
+            const res = await fetch(imageUrl)
+            const blob = await res.blob()
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result as string)
+                reader.onerror = reject
+                reader.readAsDataURL(blob)
+            })
+        } catch (error) {
+            console.error("Error loading image:", error)
+            return null
+        }
+    }
+
+    const handleExportPDF = async () => {
+        setIsGenerating(true)
+        toast({ title: "Generating Report", description: "Fetching AI insights and preparing PDF..." })
+        console.log("Starting PDF Generation...")
+
+        const doc = new jsPDF()
+        const logoUrl = "/sin-logo.jpg"
+        const logoBase64 = await getBase64ImageFromUrl(logoUrl)
+
+        const novaLogoUrl = "/nova-logo-v3.png"
+        const novaLogoBase64 = await getBase64ImageFromUrl(novaLogoUrl)
+
+        // --- AI INSIGHTS GENERATION ---
+        let aiInsights = null
+        if (selectedClient !== "all") {
+            const client = clients.find(c => c.id === selectedClient)
+            if (client) {
+                try {
+                    console.log("Contacting AI service...")
+                    const res = await fetch('/api/generate-report-insights', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            client,
+                            projects: filteredProjects
+                        })
+                    })
+
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}))
+                        console.error("AI API Error:", res.status, errData)
+                        throw new Error(`API Error ${res.status}: ${errData.error || 'Unknown'}`)
+                    } else {
+                        aiInsights = await res.json()
+
+                    }
+                } catch (error) {
+                    console.error("Report Insight Error:", error)
+                }
+            }
+        }
+
+        // --- DRAWING HELPERS ---
+        const drawHeader = (doc: jsPDF) => {
+            // Logo (Top Left)
+            if (logoBase64) {
+                try {
+                    // JPEG format assumption, simple 50x15 sizing
+                    doc.addImage(logoBase64, 'JPEG', 14, 10, 50, 15)
+                } catch (e) {
+                    console.error("Logo draw error", e)
+                }
+            } else {
+                // Fallback text if logo fails
+                doc.setFontSize(14)
+                doc.setTextColor(0, 0, 0)
+                doc.text("SIN TECHNOLOGIES", 14, 20)
+            }
+
+            // Nova Logo (Top Right)
+            if (novaLogoBase64) {
+                try {
+                    const pageWidth = doc.internal.pageSize.width || 210
+                    const imgProps = doc.getImageProperties(novaLogoBase64)
+                    const logoHeight = 15
+                    const logoWidth = (imgProps.width / imgProps.height) * logoHeight
+
+                    const logoX = pageWidth - 14 - logoWidth // Symmetric margin (14mm)
+                    const logoY = 10 // Symmetric Y (10mm)
+
+                    doc.addImage(novaLogoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight)
+                } catch (e) {
+                    console.error("Nova Logo draw error", e)
+                }
+            }
+        }
+
+        const drawFooter = (doc: jsPDF, pageNumber: number) => {
+            const pageHeight = doc.internal.pageSize.height || 297
+            doc.setFontSize(8)
+            doc.setTextColor(150, 150, 150)
+            doc.text("Powered by SIN Technologies Pvt Ltd", 105, pageHeight - 10, { align: "center" })
+        }
+
+        // --- CONTENT GENERATION ---
+
+        let startY = 40 // Initial position
+
+        // 1. Report Title Section (Page 1)
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(18)
+        doc.setTextColor(50, 50, 50)
+        doc.text("Client Report", 14, startY)
+
+        // Metadata
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(10)
+        doc.setTextColor(100, 100, 100)
+        const dateStr = new Date().toLocaleDateString()
+        doc.text(`Generated on: ${dateStr}`, 14, startY + 6)
+
+        startY += 20
+
+        // 2. Client Details Section (Page 1, if specific client selected)
+        if (selectedClient !== "all") {
+            const client = clients.find(c => c.id === selectedClient)
+            if (client) {
+                doc.setFontSize(12)
+                doc.setTextColor(0, 0, 0)
+                doc.setFont("helvetica", "bold")
+                doc.text("Client Details", 14, startY)
+
+                startY += 8
+                doc.setFontSize(10)
+
+                // Safe access to properties
+                // @ts-ignore
+                const details = [
+                    { label: "Client Name", value: client.name },
+                    { label: "Company", value: (client as any).company || "N/A" },
+                    { label: "Email", value: (client as any).email || "N/A" },
+                    { label: "Phone", value: (client as any).phone || "N/A" },
+                    { label: "Status", value: (client as any).status || "Active" }
+                ]
+
+                details.forEach((item) => {
+                    doc.setFont("helvetica", "bold")
+                    doc.text(`${item.label}:`, 14, startY)
+                    doc.setFont("helvetica", "normal")
+                    doc.text(item.value, 50, startY)
+                    startY += 6
+                })
+
+                startY += 12 // Spacing
+            }
+        }
+
+        // 3. AI Executive Summary & Insights (New Section)
+        if (aiInsights) {
+            // Executive Summary
+            doc.setFontSize(12)
+            doc.setTextColor(0, 0, 0)
+            doc.setFont("helvetica", "bold")
+            doc.text("Client Summary", 14, startY)
+            startY += 6
+
+            doc.setFont("helvetica", "normal")
+            doc.setFontSize(10)
+            doc.setTextColor(60, 60, 60)
+
+            // Text reflow for summary
+            const summaryLines = doc.splitTextToSize(aiInsights.summary, 180)
+            doc.text(summaryLines, 14, startY)
+            startY += (summaryLines.length * 5) + 8
+
+            // Insights & Recommendations
+            doc.setFontSize(12)
+            doc.setTextColor(0, 0, 0)
+            doc.setFont("helvetica", "bold")
+            doc.text("Insights & Recommendations", 14, startY)
+            startY += 6
+
+            doc.setFont("helvetica", "normal")
+            doc.setFontSize(10)
+            doc.setTextColor(60, 60, 60)
+
+            aiInsights.recommendations.forEach((rec: string) => {
+                const recLines = doc.splitTextToSize(`• ${rec}`, 180)
+                doc.text(recLines, 14, startY)
+                startY += (recLines.length * 5) + 2
+            })
+
+            startY += 10
+        }
+
+        // 4. Project Table
+        const tableColumn = ["Project Name", "Client", "Status", "Priority", "Budget", "Created"]
+        const tableRows = filteredProjects.map(p => [
             p.name,
             p.clients?.name || "N/A",
             p.status,
             p.priority,
-            p.budget || 0,
-            p.start_date || "",
+            p.budget ? `Rs. ${p.budget.toLocaleString()}` : "Rs. 0",
             new Date(p.created_at).toLocaleDateString()
         ])
 
-        const csvContent = [
-            headers.join(","),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
-        ].join("\n")
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: startY,
+            theme: 'grid',
+            headStyles: {
+                fillColor: [50, 50, 50],
+                textColor: 255,
+                fontStyle: 'bold'
+            },
+            alternateRowStyles: {
+                fillColor: [248, 248, 248]
+            },
+            styles: {
+                fontSize: 9,
+                cellPadding: 4,
+                textColor: [50, 50, 50],
+                lineColor: [230, 230, 230],
+                lineWidth: 0.1
+            },
+            margin: { top: 30 },
+            didDrawPage: (data) => {
+                drawHeader(doc)
+                drawFooter(doc, data.pageNumber)
+            }
+        })
 
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-        const link = document.createElement("a")
-        const url = URL.createObjectURL(blob)
-        link.setAttribute("href", url)
-        link.setAttribute("download", `report_${timeframe}_${selectedClient}.csv`)
-        link.style.visibility = "hidden"
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
+        doc.save(`clientnova_report_${selectedClient !== 'all' ? selectedClient : timeframe}.pdf`)
+        setIsGenerating(false)
     }
 
     if (isLoading) {
@@ -135,6 +350,7 @@ export function ReportsView() {
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
             {/* Filters and Actions */}
             <div className="flex flex-col md:flex-row gap-6 items-end md:items-center justify-between bg-card/30 p-6 rounded-2xl border border-border/50 backdrop-blur-sm">
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -171,9 +387,22 @@ export function ReportsView() {
                         </Select>
                     </div>
                 </div>
-                <Button onClick={handleExportCSV} className="w-full md:w-auto shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export CSV
+                <Button
+                    onClick={handleExportPDF}
+                    disabled={isGenerating}
+                    className="w-full md:w-auto shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105"
+                >
+                    {isGenerating ? (
+                        <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Generating...
+                        </>
+                    ) : (
+                        <>
+                            {selectedClient !== 'all' ? <Sparkles className="w-4 h-4 mr-2 text-yellow-400" /> : <Download className="w-4 h-4 mr-2" />}
+                            {selectedClient !== 'all' ? 'AI Report' : 'Export PDF'}
+                        </>
+                    )}
                 </Button>
             </div>
 
@@ -199,13 +428,13 @@ export function ReportsView() {
                     <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     <CardHeader className="pb-2 relative z-10">
                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                            <span className="text-green-500">$</span>
+                            <span className="text-green-500">₹</span>
                             Total Budget Estimate
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="relative z-10">
                         <div className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-                            ${totalBudget.toLocaleString()}
+                            ₹{totalBudget.toLocaleString()}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">Accumulated value</p>
                     </CardContent>
@@ -284,7 +513,7 @@ export function ReportsView() {
                                             </span>
                                         </TableCell>
                                         <TableCell className="font-mono text-xs text-right">
-                                            ${project.budget?.toLocaleString() || "0"}
+                                            ₹{project.budget?.toLocaleString() || "0"}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground text-xs text-right pr-6">
                                             {new Date(project.created_at).toLocaleDateString()}

@@ -29,14 +29,18 @@ export function MonthlyRevenueChart() {
       if (data) {
         setClients(data)
 
-        // Calculate revenue by plan
-        const basicCount = data.filter((c) => c.subscription_plan === "basic").length
-        const proCount = data.filter((c) => c.subscription_plan === "pro").length
-        const premiumCount = data.filter((c) => c.subscription_plan === "premium").length
+        // Calculate revenue by plan (Case insensitive)
+        const normalizePlan = (plan: string | undefined | null) => (plan || "").toLowerCase().trim()
+
+        const basicCount = data.filter((c) => normalizePlan(c.subscription_plan) === "basic").length
+        const proCount = data.filter((c) => normalizePlan(c.subscription_plan) === "pro").length
+        const premiumCount = data.filter((c) => normalizePlan(c.subscription_plan) === "premium").length
 
         const basicRevenue = basicCount * PLAN_PRICING.basic
         const proRevenue = proCount * PLAN_PRICING.pro
         const premiumRevenue = premiumCount * PLAN_PRICING.premium
+
+        // Handle 'other' or unknown plans? For now just stick to the main 3 as per UI
 
         setRevenue({
           total: basicRevenue + proRevenue + premiumRevenue,
@@ -63,21 +67,23 @@ export function MonthlyRevenueChart() {
     }
   }, [])
 
+  const normalizePlan = (plan: string | undefined | null) => (plan || "").toLowerCase().trim()
+
   const chartData = [
     {
       name: "Basic",
       revenue: revenue.basic,
-      count: clients.filter((c) => c.subscription_plan === "basic").length,
+      count: clients.filter((c) => normalizePlan(c.subscription_plan) === "basic").length,
     },
     {
       name: "Pro",
       revenue: revenue.pro,
-      count: clients.filter((c) => c.subscription_plan === "pro").length,
+      count: clients.filter((c) => normalizePlan(c.subscription_plan) === "pro").length,
     },
     {
       name: "Premium",
       revenue: revenue.premium,
-      count: clients.filter((c) => c.subscription_plan === "premium").length,
+      count: clients.filter((c) => normalizePlan(c.subscription_plan) === "premium").length,
     },
   ]
 

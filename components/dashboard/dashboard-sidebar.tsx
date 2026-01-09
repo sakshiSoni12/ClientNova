@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,7 @@ import { BarChart3, Briefcase, FolderOpen, Home, Settings, Share2, UserPlus, Use
 import { motion } from "framer-motion"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { usePermissions } from "@/hooks/use-permissions"
+import { InteractiveLogo } from "@/components/interactive-logo"
 
 
 export function DashboardSidebar({ className }: { className?: string }) {
@@ -35,16 +37,15 @@ export function DashboardSidebar({ className }: { className?: string }) {
 
   return (
     <aside className={cn("w-64 border-r border-border/40 bg-background/95 backdrop-blur-xl flex flex-col h-full sticky top-0 z-30", className)}>
-      <div className="p-6 pb-2">
-        <Link href="/dashboard" className="flex items-center gap-3 px-2">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
-            <Sparkles className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div className="flex flex-col">
+      <div className="p-4 pb-2">
+        <div className="flex items-center gap-3 px-2">
+          <InteractiveLogo width={40} height={40} />
+
+          <Link href="/dashboard" className="flex flex-col hover:opacity-80 transition-opacity">
             <span className="font-bold text-lg tracking-tight">ClientNova</span>
             <span className="text-xs text-muted-foreground font-medium">Workspace</span>
-          </div>
-        </Link>
+          </Link>
+        </div>
       </div>
 
       <ScrollArea className="flex-1 px-4 py-4">

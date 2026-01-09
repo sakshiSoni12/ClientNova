@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Image from "next/image"
+import { InteractiveLogo } from "@/components/interactive-logo"
 
 export default function LandingPage() {
   const router = useRouter()
@@ -52,9 +53,11 @@ export default function LandingPage() {
           transition={{ duration: 0.5 }}
         >
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-              <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
-            </div>
+            <InteractiveLogo
+              width={40}
+              height={40}
+              containerClassName="rounded-xl shadow-lg shadow-primary/20"
+            />
             <span className="text-lg md:text-xl font-bold tracking-tight">ClientNova</span>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
@@ -202,9 +205,7 @@ export default function LandingPage() {
             {/* Logo & Tagline */}
             <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-primary-foreground" />
-                </div>
+                <InteractiveLogo width={32} height={32} containerClassName="rounded-lg" />
                 <span className="text-xl font-bold">ClientNova</span>
               </div>
               <p className="text-sm text-muted-foreground hidden md:block border-l border-slate-200 dark:border-slate-800 pl-6 h-5 leading-5">

@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Sparkles } from "lucide-react"
+import { InteractiveLogo } from "@/components/interactive-logo"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -27,24 +28,19 @@ export default function LoginPage() {
     const supabase = createClient()
 
     try {
-      // console.log("Attempting SignIn...")
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) {
-        // console.error("Login Error:", error.message)
         throw new Error(error.message)
       }
-
-      // console.log("Login Success! User:", data.user?.id)
 
       // Force hard reload/redirect to ensure dashboard hydration
       window.location.href = "/dashboard"
 
     } catch (err: any) {
-      // console.error("Login Failed:", err)
       setError(err.message || "An error occurred during sign in")
     } finally {
       setIsLoading(false)
@@ -55,9 +51,11 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-6">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <InteractiveLogo
+            width={40}
+            height={40}
+            containerClassName="rounded-xl bg-background"
+          />
           <span className="text-2xl font-semibold">ClientNova</span>
         </div>
 
@@ -92,8 +90,35 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg flex items-center gap-2">
-                  <span className="font-semibold">Error:</span> {error}
+                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Error:</span> {error}
+                  </div>
+                  {error.includes("Email not confirmed") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-1 border-destructive/50 text-destructive hover:bg-destructive/10"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        const supabase = createClient();
+                        const { error: resendError } = await supabase.auth.resend({
+                          type: 'signup',
+                          email,
+                          options: {
+                            emailRedirectTo: `${window.location.origin}/auth/callback`
+                          }
+                        });
+                        if (resendError) {
+                          setError(resendError.message);
+                        } else {
+                          setError("Confirmation email sent! Please check your inbox.");
+                        }
+                      }}
+                    >
+                      Resend Confirmation Email
+                    </Button>
+                  )}
                 </div>
               )}
 

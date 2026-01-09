@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-const GEMINI_API_KEY = "AIzaSyBNfU1nAROVgtZWHgm87mXPq8_ONgL2qHA";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 // Trying a generally stable model version, but we have a fallback now so it matters less.
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 // --- FALLBACK LOGIC ---
 const FALLBACK_TEMPLATES: Record<string, Record<string, string[]>> = {
