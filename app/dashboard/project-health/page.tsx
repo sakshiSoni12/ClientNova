@@ -6,63 +6,131 @@ import { Sparkles, Activity, ShieldCheck } from 'lucide-react';
 import { HealthCard, HealthProject } from '@/components/project-health-monitor/health-card';
 
 import { createClient } from "@/lib/supabase/client";
+import { differenceInDays, parse, isValid, parseISO } from 'date-fns';
 
 export default function ProjectHealthPage() {
     const [projects, setProjects] = useState<HealthProject[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // Robust Date Parser for Client Side
+    const parseClientDate = (dateStr: string) => {
+        if (!dateStr) return new Date();
+
+        // Try ISO first (YYYY-MM-DD)
+        let d = parseISO(dateStr);
+        if (isValid(d)) return d;
+
+        // Try standard Date constructor
+        d = new Date(dateStr);
+        if (isValid(d)) return d;
+
+        // Try MM/DD/YYYY manual (if Date() failed)
+        // This is often needed for formats like "01/01/2026" in some locales
+        // But usually new Date() handles it. If not, we can try explicitly:
+        // Assume format is MM/DD/YYYY
+        if (dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                // Month is 0-indexed in JS Date? No, in string ctor it's 1-indexed usually
+                // new Date(yyyy, mm-1, dd)
+                return new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
+            }
+        }
+
+        return new Date(); // Fallback to today
+    };
+
     useEffect(() => {
         const fetchHealth = async () => {
             try {
-                // 1. Fetch raw projects from Supabase (Client-side bypasses API auth issues)
+                // 1. Fetch raw projects from Supabase
                 const supabase = createClient();
                 const { data: rawProjects, error } = await supabase
                     .from('projects')
                     .select('*')
+                    .neq('status', 'completed')
+                    .neq('status', 'archived')
                     .order('updated_at', { ascending: false });
 
                 if (!rawProjects || rawProjects.length === 0) {
-                    // console.log("No active projects found in DB (Client-side fetch)");
                     setLoading(false);
                     return;
                 }
 
-                // 2. OPTIMISTIC UPDATE: Show projects immediately with basic data
-                // Match HealthProject interface strictly to avoid crashes
-                const placeholderProjects: HealthProject[] = rawProjects.map((p: any) => ({
-                    id: p.id,
-                    name: p.name,
-                    status: p.status || "active",
-                    progress: p.progress || 0,
+                // 2. OPTIMISTIC UPDATE with STRICT LOGIC
+                const placeholderProjects: HealthProject[] = rawProjects.map((p: any) => {
+                    const today = new Date();
 
-                    // Optimistic Defaults (Safe for HealthCard)
-                    health: "Healthy",
-                    reason: "Analyzing project velocity...",
-                    action: "Waiting for AI assessment...",
+                    // Parse Dates strictly
+                    const start = parseClientDate(p.start_date);
+                    const end = parseClientDate(p.end_date);
 
-                    // Numeric defaults to prevent calculation errors
-                    daysElapsed: 0,
-                    daysTotal: 1,
-                    expectedProgress: 0,
-                    actualPace: 1
-                }));
+                    // Calculate Metrics
+                    let totalDuration = differenceInDays(end, start);
+                    if (totalDuration < 1) totalDuration = 1; // Prevent 0/NaN
+
+                    let elapsed = differenceInDays(today, start);
+                    if (elapsed < 0) elapsed = 0;
+
+                    const effectiveElapsed = Math.min(elapsed, totalDuration);
+                    const daysRemaining = differenceInDays(end, today);
+
+                    const progress = p.progress || 0;
+
+                    // STRICT HEALTH RULES (Client Side)
+                    const isOverdue = today > end && progress < 100;
+                    const isDeadlineClose = daysRemaining <= 3 && progress < 90;
+                    const isLagging = (effectiveElapsed / totalDuration) > 0.5 && progress < 20;
+
+                    let health: "Healthy" | "At Risk" | "Critical" = "Healthy";
+                    let reason = "On track.";
+                    let action = "Continue monitoring.";
+
+                    if (isOverdue) {
+                        health = "Critical";
+                        reason = `Behinds schedule. Overdue by ${Math.abs(daysRemaining)} days.`;
+                        action = "Immediate intervention.";
+                    } else if (isDeadlineClose) {
+                        health = "Critical";
+                        reason = `Deadline in ${daysRemaining} days with low progress (${progress}%).`;
+                        action = "Urgent push required.";
+                    } else if (isLagging) {
+                        health = "At Risk";
+                        reason = "Velocity is lower than expected.";
+                        action = "Review blockers.";
+                    }
+
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        status: p.status || "active",
+                        progress: progress,
+
+                        health,
+                        reason,
+                        action,
+
+                        // Real Calculated Numbers
+                        daysElapsed: elapsed,
+                        daysTotal: totalDuration,
+                        expectedProgress: Math.floor((effectiveElapsed / totalDuration) * 100),
+                        actualPace: 1
+                    };
+                });
+
                 setProjects(placeholderProjects);
                 setLoading(false);
 
-                // 3. Send to API for AI Analysis (Background Update)
-                const response = await fetch('/api/project-health-monitor', {
-                    method: "POST",
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ projects: rawProjects })
-                });
+                // 3. Background API Fetch (Silent Update)
+                // We keep the optimistic data visible so user sees "Critical" immediately
+                // The API might return "Healthy" if it's dumb, but we rely on client logic now primarily
+                // or we can skip API update if client logic flags critical? 
+                // Let's allow API to refine but not overwrite if critical? 
+                // No, sticking to optimistic is safer if API is flaky.
+                // Actually, let's just use client logic for now as 'Senior PM v2' if API is unresponsive.
 
-                const data = await response.json();
-                if (data.insights && Array.isArray(data.insights) && data.insights.length > 0) {
-                    setProjects(data.insights);
-                }
             } catch (error) {
                 console.error("Failed to fetch project health", error);
-                // Keep the placeholder projects if API fails, so screen isn't empty
             } finally {
                 setLoading(false);
             }

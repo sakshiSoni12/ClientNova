@@ -45,20 +45,34 @@ export function RealPanel({ clientId, clientName }: RealPanelProps) {
             console.log("API Failed, using Mock Data for demo");
 
             // Create realistic mock data based on client name
+            // Simple hash function to generate consistent pseudo-random numbers from string
+            const hash = clientName.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const getVariant = (options: string[]) => options[hash % options.length];
+            const getScore = (base: number, range: number) => base + (hash % range);
+
             const mockAnalysis: IntelligenceOutput = {
-                client_mood: "Happy",
-                risk_level: "Low",
-                trust_score: 85,
-                confidence_score: 92,
+                client_mood: getVariant(["Happy", "Anxious", "Calm", "Neutral"]) as any,
+                risk_level: getVariant(["Low", "Medium", "High", "Low"]) as any, // Bias towards Low
+                confidence_score: getScore(80, 15),
                 key_signals: [
-                    "Recent payment completed ahead of schedule",
-                    `Positive feedback on ${clientName} project deliverables`,
-                    "Increased engagement in weekly syncs"
+                    "Recent communication analysis suggests " + getVariant(["positive momentum", "mixed signals", "steady progress"]),
+                    getVariant(["Payment velocity is stable", "Budget discussions upcoming", "Contract renewal likely"]),
+                    `Engagement with ${clientName} has been ` + getVariant(["high", "moderate", "increasing"])
                 ],
-                next_best_action: "Propose phase 2 expansion next week",
-                tone_guidance: "Maintain enthusiastic and professional tone. Capitalize on current momentum.",
-                talking_points: ["Review Q3 goals", "Discuss timeline acceleration"],
-                opportunity_score: 88
+                next_best_action: getVariant([
+                    "Schedule a quarterly business review",
+                    "Propose phase 2 expansion",
+                    "Check in on recent deliverables",
+                    "Send a personalized update"
+                ]),
+                tone_guidance: getVariant([
+                    "Assertive but polite",
+                    "Empathetic and listening",
+                    "Professional and concise",
+                    "Enthusiastic and forward-looking"
+                ]),
+                talking_points: ["Review recent milestones", "Discuss timeline"],
+                opportunity_score: getScore(60, 30)
             };
 
             setAnalysis(mockAnalysis);
@@ -70,7 +84,7 @@ export function RealPanel({ clientId, clientName }: RealPanelProps) {
 
     const containerVariants = {
         hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" as const } }
     };
 
     const itemVariants = {

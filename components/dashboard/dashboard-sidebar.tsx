@@ -36,7 +36,7 @@ export function DashboardSidebar({ className }: { className?: string }) {
 
 
   return (
-    <aside className={cn("w-64 border-r border-border/40 bg-background/95 backdrop-blur-xl flex flex-col h-full sticky top-0 z-30", className)}>
+    <aside className={cn("w-64 border-r border-border/40 bg-background/95 backdrop-blur-xl flex flex-col h-full sticky top-0 z-30 overflow-hidden", className)}>
       <div className="p-4 pb-2">
         <div className="flex items-center gap-3 px-2">
           <InteractiveLogo width={40} height={40} />
@@ -48,7 +48,7 @@ export function DashboardSidebar({ className }: { className?: string }) {
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-4 py-4">
+      <ScrollArea className="flex-1 min-h-0 px-4 py-4">
         <div className="flex flex-col gap-6 pb-8">
           <div className="flex flex-col gap-2">
             {links.map((link) => {

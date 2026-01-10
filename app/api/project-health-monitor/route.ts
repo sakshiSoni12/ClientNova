@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { differenceInDays, parseISO, isValid, addDays } from "date-fns";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
@@ -36,23 +37,17 @@ export async function POST(request: Request) {
             .order('updated_at', { ascending: false });
 
         if (error) {
-            // Log error but allow fallthrough to admin bypass if applicable
             console.error("User fetch failed, attempting admin bypass...", error);
         }
 
         if (!projects || projects.length === 0) {
             console.log("No projects found with user session. Attempting Admin Bypass...");
-
-            // Fallback: Try fetching with Service Role (Admin) key to bypass RLS
-            // This fixes the "projects active but not showing" issue if auth is in debug mode
             const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
             if (serviceRoleKey) {
                 const adminSupabase = createSupabaseClient(
                     process.env.NEXT_PUBLIC_SUPABASE_URL!,
                     serviceRoleKey
                 );
-
                 const { data: adminProjects } = await adminSupabase
                     .from('projects')
                     .select('*')
@@ -62,7 +57,6 @@ export async function POST(request: Request) {
 
                 if (adminProjects && adminProjects.length > 0) {
                     projects = adminProjects;
-                    console.log(`Admin Bypass: Found ${projects.length} projects.`);
                 }
             }
         }
@@ -71,17 +65,57 @@ export async function POST(request: Request) {
 
         const insights = await Promise.all(projects.map(async (project) => {
             const today = new Date();
-            const start = new Date(project.start_date);
-            const end = new Date(project.end_date);
-            const updated = new Date(project.updated_at);
 
-            const totalDuration = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-            const elapsed = Math.max(0, (today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-            const daysSinceUpdate = Math.floor((today.getTime() - updated.getTime()) / (1000 * 60 * 60 * 24));
+            // Helper to parse dates robustly
+            const parseDate = (dateSync: any) => {
+                if (!dateSync) return new Date();
+                if (dateSync instanceof Date) return dateSync;
+                if (typeof dateSync === 'string') {
+                    const iso = parseISO(dateSync);
+                    if (isValid(iso)) return iso;
+                }
+                const jsDate = new Date(dateSync);
+                if (isValid(jsDate)) return jsDate;
+                return new Date();
+            };
 
+            let start = parseDate(project.start_date);
+            let end = parseDate(project.end_date);
+            const updated = parseDate(project.updated_at);
+
+            // Fix: If Start == End or Invalid Duration, force a 30-day window 
+            // This prevents "Day 0 of 1" and infinite pace calculations
+            let totalDuration = differenceInDays(end, start);
+            if (totalDuration <= 1) {
+                // If invalid duration, assume it started 30 days ago or ends 30 days from now?
+                // Let's just force the end date to be start + 30 for calculation purposes
+                // unless start is today, then make start 30 days ago?
+                // Safer: Just set totalDuration key to 30 for math, keep dates raw for display?
+                // Actually, let's adjust the 'end' used for calculation to avoid confusion
+                totalDuration = 30;
+                // Don't modify 'end' object itself as it affects isOverdue check maybe
+            }
+
+            let elapsed = differenceInDays(today, start);
+            if (elapsed < 0) elapsed = 0;
+
+            const effectiveElapsed = Math.min(elapsed, totalDuration);
+            const daysSinceUpdate = Math.abs(differenceInDays(today, updated));
+
+            // Strict Overdue Logic
+            // If end date is in parsed 'end', check properly
             const isOverdue = today > end && project.progress < 100;
-            const expectedProgress = Math.min(100, (elapsed / totalDuration) * 100);
-            const pace = project.progress / Math.max(1, expectedProgress); // 1.0 = perfect match, <1.0 = behind
+
+            // Pace Calculation
+            const expectedProgress = Math.min(100, (effectiveElapsed / totalDuration) * 100);
+
+            // Fix: If expected is near 0, pace is meaningless. Default to 1.0 (On Track)
+            let pace = 1.0;
+            if (expectedProgress > 1) {
+                pace = project.progress / expectedProgress;
+            } else if (project.progress > 0) {
+                pace = 2.0; // Started early!
+            }
 
             const projectData: ParsedProject = {
                 id: project.id,
@@ -92,12 +126,12 @@ export async function POST(request: Request) {
                 endDate: project.end_date,
                 progress: project.progress,
                 updatedAt: project.updated_at,
-                daysTotal: Math.floor(totalDuration),
-                daysElapsed: Math.floor(elapsed),
+                daysTotal: totalDuration,
+                daysElapsed: elapsed,
                 expectedProgress: Math.floor(expectedProgress),
                 actualPace: parseFloat(pace.toFixed(2)),
                 isOverdue,
-                daysSinceLastUpdate: daysSinceUpdate
+                daysSinceLastUpdate
             };
 
             return await analyzeProjectHealth(projectData);
@@ -112,6 +146,39 @@ export async function POST(request: Request) {
 }
 
 async function analyzeProjectHealth(project: ParsedProject) {
+    // Shared Strict Logic
+    // We define this outside so we can use it in both AI success and Catch block
+    const determineStrictHealth = () => {
+        const isCriticalLag = project.actualPace < 0.5 && project.daysElapsed > 7; // Only critical if >7 days passed
+        const isAtRiskLag = project.actualPace < 0.8 && project.daysElapsed > 7;
+        const daysRemaining = project.daysTotal - project.daysElapsed;
+        // Deadline Close = Less than 3 days left AND less than 90% done
+        const isDeadlineClose = daysRemaining <= 3 && project.progress < 90;
+
+        if (project.isOverdue || (isDeadlineClose && project.progress < 100)) {
+            return {
+                health: "Critical",
+                reason: project.isOverdue ? "Deadline missed." : "Deadline imminent with incomplete work.",
+                action: "Immediate intervention required."
+            };
+        }
+        if (isCriticalLag) {
+            return {
+                health: "Critical",
+                reason: `Velocity is critically low (${Math.round(project.actualPace * 100)}% of expected).`,
+                action: "Replanning required immediately."
+            };
+        }
+        if (isAtRiskLag || project.daysSinceLastUpdate > 14) {
+            return {
+                health: "At Risk",
+                reason: project.daysSinceLastUpdate > 14 ? "No activity for 2+ weeks." : "Progress is lagging.",
+                action: "Review blockers."
+            };
+        }
+        return null; // Healthy otherwise
+    };
+
     try {
         const prompt = `
 You are a Senior Project Manager analyzing the health of a project.
@@ -121,7 +188,7 @@ Be strictly factual and decisive.
 PROJECT DATA:
 Name: ${project.name}
 Status: ${project.status}
-Progress: ${project.progress}% (Expected based on timeline: ${project.expectedProgress}%)
+Progress: ${project.progress}% (Expected: ${project.expectedProgress}%)
 Days Elapsed: ${project.daysElapsed} / ${project.daysTotal}
 Last Activity: ${project.daysSinceLastUpdate} days ago
 Overdue: ${project.isOverdue}
@@ -131,12 +198,6 @@ RULES:
    - CRITICAL if: Overdue OR Progress is significant lag (<50% of expected).
    - AT RISK if: Progress lagging (<75% of expected) OR No activity > 14 days.
    - HEALTHY if: On track or ahead.
-
-2. Primary Reason:
-   - 1 clear sentence explaining WHY (e.g., "Pace is 40% behind schedule.", "Project halted for 2 weeks.").
-
-3. Action:
-   - 1 specific command (e.g., "Schedule urgent alignment.", "Re-scope milestones.").
 
 OUTPUT JSON ONLY:
 {
@@ -160,34 +221,32 @@ OUTPUT JSON ONLY:
         const text = json.candidates[0].content.parts[0].text.replace(/```json/g, "").replace(/```/g, "").trim();
         const aiResult = JSON.parse(text);
 
+        // Apply strict overrides on top of AI
+        const strictOverride = determineStrictHealth();
+        if (strictOverride) {
+            return { ...project, ...strictOverride };
+        }
+
         return {
             ...project,
             ...aiResult
         };
 
     } catch (e) {
-        // Deterministic Fallback
-        console.warn(`AI Failed for ${project.name}, using deterministic fallback.`);
+        console.warn(`AI Failed or parsing error for ${project.name}:`, e);
 
-        let health = "Healthy";
-        let reason = "Project is progressing on track.";
-        let action = "Continue monitoring.";
-
-        if (project.isOverdue || project.actualPace < 0.5) {
-            health = "Critical";
-            reason = project.isOverdue ? "Deadline missed with incomplete work." : "Velocity is critically low (<50%).";
-            action = "Immediate intervention required.";
-        } else if (project.actualPace < 0.8 || project.daysSinceLastUpdate > 14) {
-            health = "At Risk";
-            reason = project.daysSinceLastUpdate > 14 ? "No activity detected for 2+ weeks." : "Progress is lagging behind timeline.";
-            action = "Review blockers with team.";
+        // Fallback Logic
+        const strictOverride = determineStrictHealth();
+        if (strictOverride) {
+            return { ...project, ...strictOverride };
         }
 
+        // Default Healthy if no strict flags
         return {
             ...project,
-            health,
-            reason,
-            action
+            health: "Healthy",
+            reason: "Project is progressing on track.",
+            action: "Continue monitoring."
         };
     }
 }
