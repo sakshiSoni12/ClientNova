@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useSearchParams } from "next/navigation"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -46,6 +47,9 @@ export function ClientsList() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
+  const searchParams = useSearchParams()
+  const searchQuery = searchParams.get("search") || ""
+
   const { canCreate, canEdit, canDelete, canRequestDelete } = usePermissions()
   const { toast } = useToast()
 
@@ -53,13 +57,30 @@ export function ClientsList() {
     const supabase = createClient()
     const { data } = await supabase.from("clients").select("*").order("created_at", { ascending: false })
 
-    if (data) setClients(data)
+    if (data) {
+      setClients(data)
+    }
     setIsLoading(false)
   }
 
   useEffect(() => {
     fetchClients()
   }, [])
+
+  const filteredClients = useMemo(() => {
+    if (!searchQuery.trim()) return clients
+
+    const lowerQuery = searchQuery.toLowerCase()
+    return clients.filter((client) => {
+      return (
+        client.name.toLowerCase().includes(lowerQuery) ||
+        (client.company && client.company.toLowerCase().includes(lowerQuery)) ||
+        (client.email && client.email.toLowerCase().includes(lowerQuery)) ||
+        (client.phone && client.phone.includes(lowerQuery)) ||
+        (client.industry && client.industry.toLowerCase().includes(lowerQuery))
+      )
+    })
+  }, [clients, searchQuery])
 
   const handleClientAdded = () => {
     fetchClients()
@@ -111,7 +132,7 @@ export function ClientsList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Clients</h1>
           <p className="text-muted-foreground mt-1">Manage your client relationships</p>
@@ -124,11 +145,13 @@ export function ClientsList() {
         )}
       </div>
 
-      {clients.length === 0 ? (
+      {filteredClients.length === 0 ? (
         <Card className="glass border-border/50">
           <CardContent className="text-center py-16">
-            <p className="text-muted-foreground mb-4">No clients yet</p>
-            {canCreate && (
+            <p className="text-muted-foreground mb-4">
+              {searchQuery ? "No clients found matching your search" : "No clients yet"}
+            </p>
+            {canCreate && !searchQuery && (
               <Button onClick={() => setIsDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Your First Client
@@ -138,7 +161,7 @@ export function ClientsList() {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {clients.map((client) => {
+          {filteredClients.map((client) => {
             const subscriptionBadge = getSubscriptionBadge(client.subscription_plan || "basic")
             return (
               <Card key={client.id} className="glass border-border/50 hover:border-primary/50 transition-colors">
@@ -242,3 +265,4 @@ export function ClientsList() {
     </div>
   )
 }
+

@@ -49,8 +49,8 @@ export function DashboardSidebar({ className }: { className?: string }) {
       </div>
 
       <ScrollArea className="flex-1 px-4 py-4">
-        <div className="flex flex-col gap-6">
-          <div className="space-y-1.5">
+        <div className="flex flex-col gap-6 pb-8">
+          <div className="flex flex-col gap-2">
             {links.map((link) => {
               const Icon = link.icon
               const isActive = pathname === link.href
@@ -81,7 +81,7 @@ export function DashboardSidebar({ className }: { className?: string }) {
           </div>
 
           {isAdmin && (
-            <div className="space-y-1.5 pt-2 border-t border-border/50">
+            <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
               <div className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Admin
               </div>
