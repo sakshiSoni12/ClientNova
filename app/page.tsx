@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+<<<<<<< HEAD
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Sparkles, Shield, Zap, Users, Palette, Globe, Layers } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -22,10 +23,68 @@ export default function LandingPage() {
       const supabase = createClient()
       const { data } = await supabase.auth.getSession()
       setSession(data.session)
+=======
+import { motion, useScroll, useTransform } from "framer-motion"
+import { useEffect, useState, useRef, Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { MagneticButton } from "@/components/ui/magnetic-button"
+import { MoodMarquee } from "@/components/ui/mood-marquee"
+import { FloatingBooks } from "@/components/ui/floating-books"
+
+// Floating Shape Component
+function FloatingShape({ className, delay }: { className: string, delay: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{
+        opacity: [0.3, 0.6, 0.3],
+        y: [0, -30, 0],
+        rotate: [0, 10, -10, 0]
+      }}
+      transition={{
+        duration: 10,
+        delay: delay,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+      className={`absolute blur-3xl rounded-full opacity-60 mix-blend-multiply dark:mix-blend-screen ${className}`}
+    />
+  )
+}
+
+function HomeContent() {
+  const [user, setUser] = useState<any>(null)
+  const [isMounted, setIsMounted] = useState(false)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const supabase = createClient()
+
+  // Parallax Logic
+  const { scrollY } = useScroll()
+  const y1 = useTransform(scrollY, [0, 500], [0, 150])
+  const y2 = useTransform(scrollY, [0, 500], [0, -150])
+  const opacity = useTransform(scrollY, [0, 300], [1, 0])
+
+  // Process Fade Initials
+  const processVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.3, duration: 1 } })
+  }
+
+  useEffect(() => {
+    setIsMounted(true)
+
+    const loggedIn = searchParams.get("logged_in")
+    if (loggedIn === "true") {
+      router.replace("/", { scroll: false })
+>>>>>>> 53d242c (in9n9)
     }
     checkSession()
   }, [])
 
+<<<<<<< HEAD
   const fadeIn = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
@@ -197,8 +256,144 @@ export default function LandingPage() {
               </motion.div>
             ))}
           </div>
+=======
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [searchParams, router, supabase])
+
+  if (!isMounted) return null
+
+  return (
+    <div className="min-h-screen relative overflow-x-hidden flex flex-col selection:bg-primary/20">
+      {/* Background Layer */}
+      <FloatingBooks />
+      <div className="noise-overlay" />
+      <div className="vignette-overlay" />
+      <div className="living-gradient" />
+
+      {/* Floating Motion Figures */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none fixed">
+        <FloatingShape className="w-96 h-96 bg-primary/20 -top-20 -left-20" delay={0} />
+        <FloatingShape className="w-[500px] h-[500px] bg-accent/20 bottom-0 right-0" delay={2} />
+        <FloatingShape className="w-64 h-64 bg-foreground/5 top-1/2 left-1/3" delay={4} />
+      </div>
+
+      {/* Navigation */}
+      <motion.nav
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, ease: "easeOut" }}
+        className="fixed top-0 left-0 right-0 z-50 p-8 flex justify-between items-center"
+      >
+        <MagneticButton>
+          <span className="font-serif text-2xl tracking-widest font-bold select-none cursor-pointer text-transparent bg-clip-text bg-gradient-to-br from-neutral-800 via-neutral-500 to-neutral-800 dark:from-white dark:via-neutral-300 dark:to-neutral-500 drop-shadow-sm">NovelAura</span>
+        </MagneticButton>
+
+        <div className="flex items-center gap-4 text-sm font-bold tracking-wide">
+          <Link href="/about" className="px-5 py-2 rounded-full border border-foreground/10 bg-background/5 hover:bg-foreground/5 transition-all text-foreground/80 hover:text-foreground" data-hoverable="true">Philosophy</Link>
+          <ThemeToggle />
+          {user ? (
+            <div className="flex items-center gap-6">
+              <Link href="/stories" className="px-5 py-2 rounded-full border border-foreground/10 bg-background/5 hover:bg-foreground/5 transition-all text-foreground/80 hover:text-foreground" data-hoverable="true">Library</Link>
+              <Link href="/admin/add-story" className="px-5 py-2 rounded-full border border-foreground/10 bg-background/5 hover:bg-foreground/5 transition-all text-foreground/80 hover:text-foreground" data-hoverable="true">Add Story</Link>
+              <button onClick={async () => { await supabase.auth.signOut(); router.refresh() }} className="px-5 py-2 rounded-full border border-foreground/10 bg-background/5 hover:bg-foreground/5 transition-all text-foreground/80 hover:text-foreground" data-hoverable="true">Sign Out</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <Link href="/stories" className="px-5 py-2 rounded-full border border-foreground/10 bg-background/5 hover:bg-foreground/5 transition-all text-foreground/80 hover:text-foreground" data-hoverable="true">Library</Link>
+              <Link href="/admin/add-story" className="px-5 py-2 rounded-full border border-foreground/10 bg-background/5 hover:bg-foreground/5 transition-all text-foreground/80 hover:text-foreground" data-hoverable="true">Add Story</Link>
+              <Link href="/login" className="px-5 py-2 rounded-full border border-foreground/10 bg-background/5 hover:bg-foreground/5 transition-all text-foreground/80 hover:text-foreground" data-hoverable="true">Entrance</Link>
+            </div>
+          )}
+        </div>
+      </motion.nav>
+
+      {/* Hero Section */}
+      <main className="flex-1 flex flex-col items-center justify-center min-h-screen text-center px-6 z-10 relative">
+        <motion.div style={{ y: y1 }} className="absolute top-1/4 left-10 w-4 h-4 rounded-full bg-foreground/20" />
+        <motion.div style={{ y: y2 }} className="absolute bottom-1/4 right-20 w-8 h-8 border border-foreground/10 rounded-full" />
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          style={{ opacity }}
+          transition={{ duration: 1.2, ease: "easeOut" }}
+          className="max-w-3xl mx-auto space-y-16"
+        >
+          <div className="space-y-8">
+            <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl leading-tight text-balance-header opacity-90 tracking-tighter cursor-default">
+              If your mood was a story, how would it begin?
+            </h1>
+            <p className="text-xl md:text-2xl font-light text-muted-foreground leading-relaxed max-w-lg mx-auto italic opacity-80">
+              We don't search by genre. We search by feeling.
+            </p>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.5 }}
+          >
+            <MagneticButton>
+              <Link href="/quiz">
+                <div
+                  className="group relative inline-flex items-center justify-center py-6 px-12 cursor-pointer overflow-hidden rounded-full border border-foreground/10 bg-background/5 backdrop-blur-sm"
+                  data-hoverable="true"
+                >
+                  <span className="absolute inset-0 bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <span className="relative font-serif text-2xl italic tracking-wide group-hover:tracking-wider transition-all duration-700">
+                    Begin Reflection
+                  </span>
+                </div>
+              </Link>
+            </MagneticButton>
+          </motion.div>
+        </motion.div>
+
+        {/* Scroll Indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.3 }}
+          transition={{ delay: 2, duration: 1.5 }}
+          className="absolute bottom-12 animate-bounce"
+        >
+          <span className="text-[10px] uppercase tracking-[0.3em]">Scroll</span>
+        </motion.div>
+      </main>
+
+      {/* The Process Section (Below Fold) */}
+      <section className="relative z-10 py-32 px-6 max-w-6xl mx-auto w-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-16 md:gap-8 text-center md:text-left">
+          {[
+            { title: "Reflect", text: "Look inward. Identify your emotional weather." },
+            { title: "Discover", text: "We translate your feelings into literary atmospheres." },
+            { title: "Immerse", text: "Find the book that understands your silence." }
+          ].map((step, i) => (
+            <motion.div
+              key={step.title}
+              custom={i}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              variants={processVariants}
+              className="space-y-6"
+            >
+              <span className="text-xs font-mono opacity-60 font-black">0{i + 1}</span>
+              <h3 className="font-serif text-3xl md:text-4xl italic font-bold">{step.title}</h3>
+              <p className="text-foreground font-semibold text-lg leading-relaxed max-w-xs">{step.text}</p>
+            </motion.div>
+          ))}
+>>>>>>> 53d242c (in9n9)
         </div>
 
+<<<<<<< HEAD
         {/* Footer - Landscape Layout */}
         <footer className="border-t border-slate-200 dark:border-slate-800 py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
@@ -233,6 +428,25 @@ export default function LandingPage() {
         </footer>
 
       </div>
+=======
+      {/* Mood Marquee */}
+      <section className="relative z-10 pb-12">
+        <MoodMarquee />
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-10 py-12 text-center text-[10px] uppercase tracking-[0.3em] font-light text-muted-foreground opacity-50">
+        NovelAura &copy; {new Date().getFullYear()} — Made for introverts
+      </footer>
+>>>>>>> 53d242c (in9n9)
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
   )
 }

@@ -1,5 +1,6 @@
 "use client"
 
+<<<<<<< HEAD
 import React from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
@@ -193,6 +194,71 @@ export default function AboutPage() {
                     </Link>
                 </div>
             </section>
+=======
+import Link from "next/link"
+import { motion } from "framer-motion"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { ArrowLeft } from "lucide-react"
+
+export default function AboutPage() {
+    return (
+        <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center p-6 sm:p-12">
+            <div className="noise-overlay" />
+            <div className="vignette-overlay" />
+            <div className="living-gradient" />
+
+            {/* Nav */}
+            <nav className="fixed top-0 left-0 right-0 p-6 flex justify-between items-center z-50">
+                <Link href="/">
+                    <span className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group">
+                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        Back
+                    </span>
+                </Link>
+                <ThemeToggle />
+            </nav>
+
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                className="max-w-2xl w-full space-y-16 text-center sm:text-left"
+            >
+                <header className="space-y-6">
+                    <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl leading-[1.1]">
+                        Why we read<br />
+                        <span className="italic opacity-60">is how we feel.</span>
+                    </h1>
+                </header>
+
+                <section className="space-y-6 text-lg md:text-xl font-medium leading-relaxed text-foreground/90">
+                    <p>
+                        The internet wants to optimize your reading list. It gives you 5-star ratings, bestseller tags, and productivity hacks.
+                    </p>
+                    <p className="text-2xl font-bold italic text-foreground">
+                        But reading isn't productivity. It's intimacy.
+                    </p>
+                    <p>
+                        You don't choose a book because it has 4.8 stars. You choose it because you are <span className="font-bold">lonely</span>, or <span className="font-bold">restless</span>, or in need of a <span className="font-bold">quiet kind of hope</span>.
+                    </p>
+                    <p>
+                        NovelAura is a mood mirror. We don't ask what genre you like. We ask <span className="font-bold italic">what weather is currently in your chest.</span>
+                    </p>
+                    <p className="opacity-80">
+                        We believe the right story, found at the right moment, is better than any algorithm.
+                    </p>
+                </section>
+
+                <div className="pt-8">
+                    <Link href="/quiz">
+                        <span className="inline-block border-b border-foreground/30 hover:border-foreground pb-1 text-xl font-serif italic transition-all cursor-pointer">
+                            Find your story &rarr;
+                        </span>
+                    </Link>
+                </div>
+
+            </motion.div>
+>>>>>>> 53d242c (in9n9)
         </div>
     )
 }

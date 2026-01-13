@@ -4,6 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+<<<<<<< HEAD
   /* Eduwerks Inspired Theme - Vibrant Violet & Warm Neutrals */
   --background: oklch(0.985 0.005 300);
   --foreground: oklch(0.12 0.04 280);
@@ -74,6 +75,79 @@
   --sidebar-accent-foreground: oklch(0.98 0.01 290);
   --sidebar-border: oklch(0.18 0.04 280);
   --sidebar-ring: oklch(0.65 0.22 290);
+=======
+  /* Light Mode - Warm Parchment & Rose Dust */
+  --background: #F5F2EA;
+  /* Warm, aged paper */
+  --foreground: #2C2420;
+  /* Deep Sepia */
+
+  --card: rgba(245, 242, 234, 0.6);
+  --card-foreground: #2C2420;
+
+  --popover: #F5F2EA;
+  --popover-foreground: #2C2420;
+
+  --primary: #8E7A7A;
+  /* Muted Rose/Brown */
+  --primary-foreground: #F5F2EA;
+
+  --secondary: #D4CDC3;
+  /* Stone */
+  --secondary-foreground: #2C2420;
+
+  --muted: #E6E1D8;
+  --muted-foreground: #8C8480;
+
+  --accent: #B0A099;
+  /* Dusty warmth */
+  --accent-foreground: #2C2420;
+
+  --destructive: #945858;
+  --destructive-foreground: #F5F2EA;
+
+  --border: rgba(44, 36, 32, 0.08);
+  --input: rgba(44, 36, 32, 0.04);
+  --ring: rgba(142, 122, 122, 0.3);
+
+  --radius: 0.5rem;
+}
+
+.dark {
+  /* Dark Mode - Midnight & Indigo */
+  --background: #0F111A;
+  /* Deepest Indigo */
+  --foreground: #E0E0E6;
+  /* Moon-white */
+
+  --card: rgba(20, 22, 31, 0.6);
+  --card-foreground: #E0E0E6;
+
+  --popover: #151724;
+  --popover-foreground: #E0E0E6;
+
+  --primary: #7A7C99;
+  /* Faded Lavender */
+  --primary-foreground: #0F111A;
+
+  --secondary: #1F2133;
+  /* Dark Blue */
+  --secondary-foreground: #E0E0E6;
+
+  --muted: #25283D;
+  --muted-foreground: #868899;
+
+  --accent: #4A4D66;
+  /* Storm Blue */
+  --accent-foreground: #E0E0E6;
+
+  --destructive: #7D4E4E;
+  --destructive-foreground: #E0E0E6;
+
+  --border: rgba(224, 224, 230, 0.08);
+  --input: rgba(224, 224, 230, 0.05);
+  --ring: rgba(122, 124, 153, 0.3);
+>>>>>>> 53d242c (in9n9)
 }
 
 @theme inline {
@@ -107,6 +181,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+<<<<<<< HEAD
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -115,6 +190,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+=======
+
+  --font-serif: var(--font-serif);
+  --font-sans: var(--font-sans);
+>>>>>>> 53d242c (in9n9)
 }
 
 @layer base {
@@ -122,12 +202,30 @@
     @apply border-border outline-ring/50;
   }
   body {
+<<<<<<< HEAD
     @apply bg-background text-foreground;
+=======
+    @apply bg-background text-foreground antialiased font-sans;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+    transition: background-color 1.5s ease, color 1.5s ease;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-serif tracking-tight text-balance;
+>>>>>>> 53d242c (in9n9)
   }
 }
 
 /* Added frosted glass effect for premium UI panels */
 @layer utilities {
+<<<<<<< HEAD
   .glass {
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(12px);
@@ -156,3 +254,95 @@ nextjs-portal {
   pointer-events: none !important;
   visibility: hidden !important;
 }
+=======
+  /* ATMOSPHERE LAYERS */
+
+  /* 1. Grain/Noise - The Texture of Film */
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.05;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  /* 2. Vignette - The Cinematic Edges */
+  .vignette-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.4) 120%);
+  }
+
+  .dark .vignette-overlay {
+    background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.6) 120%);
+  }
+
+  /* 3. Living Gradient - The Pulse */
+  .living-gradient {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background: radial-gradient(circle at 50% 50%,
+        var(--background) 0%,
+        transparent 50%),
+      conic-gradient(from 0deg at 50% 50%,
+        var(--primary) 0deg,
+        var(--accent) 120deg,
+        var(--secondary) 240deg,
+        var(--primary) 360deg);
+    opacity: 0.1;
+    filter: blur(80px);
+    animation: aurora-spin 20s linear infinite;
+    pointer-events: none;
+  }
+
+  .dark .living-gradient {
+    opacity: 0.15;
+  }
+
+  @keyframes aurora-spin {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+@layer utilities {
+  .text-balance-header {
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+  }
+
+  .glass-panel {
+    background: var(--card);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+  }
+
+  .hover-breathe {
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+  }
+
+  .hover-breathe:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+  }
+
+  /* 3D Utilities */
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+}
+>>>>>>> 53d242c (in9n9)
